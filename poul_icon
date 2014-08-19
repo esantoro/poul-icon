@@ -1,0 +1,112 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+## GTK Stock items: http://www.pygtk.org/pygtk2reference/gtk-stock-items.html
+
+import os,sys
+import gtk
+import urllib2
+import gobject
+    
+
+
+class SystrayIconApp:
+	def __init__(self):
+		self.tray = gtk.StatusIcon()
+		self.tray.set_from_stock(gtk.STOCK_ABOUT) 
+		self.tray.connect('popup-menu', self.on_right_click)
+		self.tray.set_tooltip(('LA SEDE DEL POUL È APERTA O CHIUSA?'))
+
+                gobject.timeout_add(100, self.update, "https://bits.poul.org/status", True)
+                gobject.timeout_add(10000, self.update, "https://bits.poul.org/status")
+                
+		
+
+    	def on_right_click(self, icon, event_button, event_time):
+		self.make_menu(event_button, event_time)
+
+    	def make_menu(self, event_button, event_time):
+		menu = gtk.Menu()
+
+		# show about dialog
+		about = gtk.MenuItem("About")
+		about.show()
+		menu.append(about)
+		about.connect('activate', self.show_about_dialog)
+
+		# add quit item
+		quit = gtk.MenuItem("Quit")
+		quit.show()
+		menu.append(quit)
+		quit.connect('activate', gtk.main_quit)
+
+		menu.popup(None, None, gtk.status_icon_position_menu,
+		           event_button, event_time, self.tray)
+
+	def  show_about_dialog(self, widget):
+		about_dialog = gtk.AboutDialog()
+		about_dialog.set_destroy_with_parent (True)
+		about_dialog.set_icon_name ("POuL-Icon")
+		about_dialog.set_name('POuL-Icon')
+		about_dialog.set_version('0.1')
+		about_dialog.set_copyright("(C) 2014 Snoopy")
+		about_dialog.set_comments(("LA SEDE È GIALLA\nE NOI PORTIAMO MOLTO RISPETTO\nQUESTO VALE COME ARTICOLO\nDEVO ANCHE SCRIVERE UNA MODALITÀ DI EMACS PER QUESTO\nSTALLMAN APPROVA!\nRADU ANCHE!!"))
+		about_dialog.set_authors(['Emanuele Santoro <manu@santoro.tk>'])
+		about_dialog.run()
+		about_dialog.destroy()
+
+        def get_tray_object(self) :
+            return self.tray
+
+        def set_sede_aperta(self) :
+            self.tray.set_from_stock(gtk.STOCK_YES) 
+            
+
+        def set_sede_chiusa(self) :
+            self.tray.set_from_stock(gtk.STOCK_NO)
+
+        def set_tooltip(self, tooltip_string) :
+            self.tray.set_tooltip(tooltip_string) ;
+
+        def update(self, data_url="https://bits.poul.org/status", should_not_be_recalled=False):
+            ## should_not_be_recalled IS ONLY TO HANDLE FIRST-RUN AS THE CALLBACK FUNCTION IS CALLED 
+            ## THE FIRST TIME **AFTER** THE TIMEOUT IS PASSED.
+
+            ## YEAH VENOMZEROZERO THIS APP IS VERY RESPECT FULL
+
+            ## #GIALLA 
+            
+            ## Let's try fetching content from poul's server
+            try :
+                status = urllib2.urlopen(data_url).read()
+            except :
+                ## if it fails, we handle it gracefully
+                self.set_tooltip("Could not reach POuL's server")
+                if (should_not_be_recalled):
+                    return False
+                return True
+            
+            ## if it goes okay, let's handle it
+            if status == "1" :
+                self.set_sede_aperta()
+                self.set_tooltip("LA SEDE È APERTA!")
+            elif status == "0" :
+                self.set_sede_chiusa()
+                self.set_tooltip("LA SEDE È CHIUSA")
+            else :
+                ## I HAVE NO IDEA WHAT I'M DOING
+                self.set_tooltip("I HAVE NO IDEA WHAT'S HAPPENING: " + status)
+
+            if (should_not_be_recalled):
+                return False
+            return True
+
+
+if __name__ == "__main__":
+    pid = os.fork()
+    if pid != 0:
+        sys.exit(0)
+    else :
+        app = SystrayIconApp()
+        gtk.main()
+
